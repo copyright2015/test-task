@@ -27,7 +27,7 @@ Initial working application skeleton has been implemented from `PRD.md`, `ARCHIT
 - Removed stream offers are retained in `stream_offers` as inactive records to support restoration.
 - Removed offers in the editor use a muted row style adapted to the current theme; the restore button remains available.
 - UI strings are in `frontend/src/locales.js`; theme colors are in `frontend/src/theme.js`.
-- `README.md` contains both Russian and English setup instructions.
+- `README.md` contains Russian setup instructions and manual two-terminal startup commands for Windows and macOS/Linux.
 - Vuetify components require `vite-plugin-vuetify` with `autoImport: true` in `frontend/vite.config.js`; without it, the Vue tags render as unstyled custom elements.
 - The campaign editor response must serialize the fetched `campaign` object (not an undefined variable); frontend API parsing accepts text responses so non-JSON server errors remain readable.
 
