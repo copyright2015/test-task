@@ -26,7 +26,7 @@
 
 ### Windows (PowerShell)
 
-Терминал 1 — подготовка и запуск API / Terminal 1 — set up and start the API:
+Терминал 1 — подготовка и запуск API
 
 ```powershell
 python -m venv .venv
@@ -36,7 +36,7 @@ New-Item -ItemType Directory -Force -Path database | Out-Null
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir backend --reload
 ```
 
-Терминал 2 — подготовка и запуск интерфейса / Terminal 2 — set up and start the UI:
+Терминал 2 — подготовка и запуск интерфейса
 
 ```powershell
 Set-Location frontend
@@ -46,7 +46,7 @@ npm run dev
 
 ### macOS / Linux (Bash)
 
-Терминал 1 — подготовка и запуск API / Terminal 1 — set up and start the API:
+Терминал 1 — подготовка и запуск API
 
 ```bash
 python3 -m venv .venv
@@ -56,7 +56,7 @@ mkdir -p database
 .venv/bin/python -m uvicorn app.main:app --app-dir backend --reload
 ```
 
-Терминал 2 — подготовка и запуск интерфейса / Terminal 2 — set up and start the UI:
+Терминал 2 — подготовка и запуск интерфейса
 
 ```bash
 cd frontend
