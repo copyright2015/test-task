@@ -27,6 +27,20 @@ def item_id(item: dict[str, Any]) -> str:
     return str(value)
 
 
+def has_active_offers(stream: dict[str, Any]) -> bool:
+    offers = stream.get("offers", [])
+    return isinstance(offers, list) and any(
+        isinstance(offer, dict)
+        and not offer.get("deleted")
+        and offer.get("state", "active") == "active"
+        for offer in offers
+    )
+
+
+def is_active_offer_stream(stream: dict[str, Any]) -> bool:
+    return stream.get("state", "active") == "active" and has_active_offers(stream)
+
+
 def save_campaign(db: Session, item: dict[str, Any]) -> Campaign:
     identifier = item_id(item)
     campaign = db.get(Campaign, identifier)
@@ -219,6 +233,20 @@ async def update_campaign_editor(
     current = collection_items(await keitaro.request("GET", f"/campaigns/{campaign_id}/streams"))
     current_ids = {item_id(item) for item in current}
     submitted_ids = {str(item["id"]) for item in payload.streams if item.get("id") is not None}
+    removed_ids = current_ids - submitted_ids
+    if removed_ids:
+        if any(not has_active_offers(item) for item in current if item_id(item) in removed_ids):
+            raise HTTPException(status_code=422, detail="Streams without active offers cannot be deleted")
+        active_ids = {item_id(item) for item in current if is_active_offer_stream(item)}
+        remaining_active_ids = {
+            str(item["id"])
+            for item in payload.streams
+            if item.get("id") is not None
+            and str(item["id"]) in active_ids
+            and is_active_offer_stream(item)
+        }
+        if len(active_ids) < 2 or not remaining_active_ids:
+            raise HTTPException(status_code=422, detail="At least one saved active offer stream must remain")
     for stream in payload.streams:
         fixed_total = sum(
             float(offer.get("share", offer.get("weight", 0)))
@@ -227,7 +255,7 @@ async def update_campaign_editor(
         )
         if fixed_total > 100:
             raise HTTPException(status_code=422, detail="Fixed offer shares cannot exceed 100%")
-    for stream_id in current_ids - submitted_ids:
+    for stream_id in removed_ids:
         await keitaro.request("DELETE", f"/streams/{stream_id}")
         db_stream = db.get(Stream, stream_id)
         if db_stream is not None:

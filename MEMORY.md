@@ -15,12 +15,15 @@ Initial working application skeleton has been implemented from `PRD.md`, `ARCHIT
 
 ## Implemented behavior
 
-- Campaign list reads its initial contents from SQLite and has an explicit refresh-from-Keitaro action. Enable/disable and delete operations call Keitaro.
+- Campaign list reads its initial contents from SQLite, then automatically refreshes from Keitaro. Enable/disable and delete operations call Keitaro.
 - Campaign creation selects a country and an API offer, then creates the campaign and two streams (country redirect to Google and selected offer). It selects the first available domain, campaign group, and traffic source from the API.
 - Editor loads campaign and streams from Keitaro, supports stream and offer additions/removals, offer restoration, fixed shares, and submits edits explicitly.
-- Existing streams with no active or archived offers show only their name and delete action. New streams and streams with archived offers retain their offer controls.
+- Existing streams without offers show only their name. New streams and streams with archived offers retain their offer controls.
 - The editor highlights modified and removed stream cards, enables saving only when changes exist, and prompts before leaving with unsaved changes. Browser refresh/close uses the browser's native warning.
+- The editor's discard button appears only with unsaved changes and restores the loaded stream state without leaving or sending changes to the API.
+- Editor save, discard, and cancel actions stay together in a sticky heading during page scrolling.
 - Removing an existing stream marks its card for deletion until saving and allows restoring it; a new unsaved stream is removed immediately.
+- Existing streams without active offers cannot be deleted. Deleting a stream requires at least two saved active offer streams and must leave at least one; unsaved streams cannot satisfy this safeguard.
 - Removed stream offers are retained in `stream_offers` as inactive records to support restoration.
 - Removed offers in the editor use a muted row style adapted to the current theme; the restore button remains available.
 - UI strings are in `frontend/src/locales.js`; theme colors are in `frontend/src/theme.js`.
@@ -42,13 +45,15 @@ Initial working application skeleton has been implemented from `PRD.md`, `ARCHIT
 - Verified editor change detection in the browser for stream renaming, adding/removing a new stream, and removing/restoring an offer; reverting each change disables saving again.
 - Verified that an existing stream without offers is compact, while new streams and streams containing removed offers retain offer controls.
 - Verified card highlights, stream deletion/restoration, the leave dialog, failed and successful saves, route changes, and the `beforeunload` event using mocked API responses in the browser.
+- Verified the editor toolbar stays below the app bar while scrolling on desktop and mobile, and that list refresh errors leave cached campaigns visible.
+- Stream deletion safeguards are checked by backend unit tests and verified in the editor with mocked API responses.
 - Browser test pages with mocked `fetch` must be closed after verification: their test data persists across reloads in that page and can be mistaken for real data.
 
 ## Next steps / caveats
 
 1. Configure a valid `KEITARO_API_KEY` locally and smoke-test catalog retrieval, campaign creation, stream editing, enable/disable, and deletion against the test API.
 2. Verify Keitaro's actual test-server schema for domain/group/source field names and stream filter/action payloads. The public OpenAPI docs were checked during initial work, but the specified test API may differ.
-3. Add focused automated tests for backend API payload construction and offer share/restore behavior.
+3. Add focused automated tests for campaign API payload construction and offer share/restore behavior.
 4. Reassess dependency audit findings before release.
 
 The implementation is an initial baseline, not a fully validated production release. Preserve unrelated worktree changes; the initial project Markdown files were untracked when implementation started.

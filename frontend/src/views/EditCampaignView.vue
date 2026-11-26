@@ -34,6 +34,22 @@ const originalStreams = computed(() =>
   initialStreams.value === null ? [] : JSON.parse(initialStreams.value),
 )
 
+function hasActiveOffers(stream) {
+  return stream.offers.some((offer) => !offer.deleted && (offer.state === undefined || offer.state === 'active'))
+}
+
+function isActiveOfferStream(stream) {
+  return (stream.state === undefined || stream.state === 'active') && hasActiveOffers(stream)
+}
+
+const activeSavedOfferStreams = computed(() =>
+  streams.value.filter((stream) => {
+    if (stream.id == null || isRemoved(stream) || !isActiveOfferStream(stream)) return false
+    const original = originalStreams.value.find((item) => String(item.id) === String(stream.id))
+    return original && isActiveOfferStream(original)
+  }),
+)
+
 function isRemoved(stream) {
   return stream.id != null && removedStreamIds.value.includes(String(stream.id))
 }
@@ -48,7 +64,15 @@ function showOffers(stream) {
   return !isRemoved(stream) && (stream.id == null || stream.offers.length > 0)
 }
 
+function canRemoveStream(stream) {
+  if (stream.id == null) return true
+  const original = originalStreams.value.find((item) => String(item.id) === String(stream.id))
+  return !!original && hasActiveOffers(original) && hasActiveOffers(stream) &&
+    activeSavedOfferStreams.value.length >= 2
+}
+
 function removeStream(stream, index) {
+  if (!canRemoveStream(stream)) return
   if (stream.id == null) {
     streams.value.splice(index, 1)
   } else {
@@ -58,6 +82,14 @@ function removeStream(stream, index) {
 
 function restoreStream(stream) {
   removedStreamIds.value = removedStreamIds.value.filter((id) => id !== String(stream.id))
+}
+
+function discardChanges() {
+  if (!hasChanges.value || loading.value) return
+  streams.value = JSON.parse(initialStreams.value)
+  removedStreamIds.value = []
+  selectedOffer.value = {}
+  error.value = ''
 }
 
 function beforeUnload(event) {
@@ -198,9 +230,13 @@ async function saveAndLeave() {
 </script>
 
 <template>
-  <div class="page-heading">
+  <div class="page-heading editor-heading">
     <div><h1>{{ t('editCampaign') }}</h1><div class="text-medium-emphasis">{{ campaignName }}</div></div>
-    <v-btn color="primary" :loading="loading" :disabled="!hasChanges || loading" @click="save">{{ t('save') }}</v-btn>
+    <div class="d-flex flex-wrap ga-2">
+      <v-btn variant="text" :disabled="loading" @click="router.push('/')">{{ t('cancel') }}</v-btn>
+      <v-btn v-if="hasChanges" variant="outlined" :disabled="loading" @click="discardChanges">{{ t('resetChanges') }}</v-btn>
+      <v-btn color="primary" :loading="loading" :disabled="!hasChanges || loading" @click="save">{{ t('save') }}</v-btn>
+    </div>
   </div>
   <v-alert v-if="error" type="error" class="mb-4">{{ t('error') }}: {{ error }}</v-alert>
   <div v-if="loading && !streams.length" class="text-center pa-8">{{ t('loading') }}</div>
@@ -214,7 +250,13 @@ async function saveAndLeave() {
         {{ isRemoved(stream) ? t('streamRemoved') : t('changed') }}
       </v-chip>
       <v-btn v-if="isRemoved(stream)" icon="mdi-restore" color="primary" variant="text" :disabled="loading" :aria-label="t('restoreStream')" @click="restoreStream(stream)" />
-      <v-btn v-else icon="mdi-delete" color="error" variant="text" :disabled="loading" :aria-label="t('removeStream')" @click="removeStream(stream, index)" />
+      <v-tooltip v-else-if="stream.id == null || stream.offers.length" :disabled="canRemoveStream(stream)" :text="t('streamDeleteRestricted')" location="top">
+        <template #activator="{ props }">
+          <span v-bind="props" :tabindex="canRemoveStream(stream) ? undefined : 0">
+            <v-btn icon="mdi-delete" color="error" variant="text" :disabled="loading || !canRemoveStream(stream)" :aria-label="t('removeStream')" @click="removeStream(stream, index)" />
+          </span>
+        </template>
+      </v-tooltip>
     </div>
     <v-table v-if="showOffers(stream)">
       <thead><tr><th>{{ t('offer') }}</th><th>{{ t('share') }}</th><th>{{ t('fixed') }}</th><th>{{ t('actions') }}</th></tr></thead>
@@ -245,8 +287,6 @@ async function saveAndLeave() {
   <div class="d-flex align-center ga-3">
     <v-btn variant="outlined" prepend-icon="mdi-plus" :disabled="loading" @click="addStream">{{ t('addStream') }}</v-btn>
     <span class="text-medium-emphasis">{{ activeOfferCount }} {{ t('offers').toLowerCase() }}</span>
-    <v-spacer />
-    <v-btn variant="text" :disabled="loading" @click="router.push('/')">{{ t('cancel') }}</v-btn>
   </div>
   <v-dialog :model-value="leaveDialog" max-width="500" persistent>
     <v-card :title="t('unsavedChanges')">
@@ -264,6 +304,20 @@ async function saveAndLeave() {
 </template>
 
 <style scoped>
+.editor-heading {
+  position: sticky;
+  top: var(--v-layout-top, 0px);
+  z-index: 4;
+  padding: 12px 0;
+  background-color: rgb(var(--v-theme-background));
+}
+
+@media (max-width: 600px) {
+  .editor-heading {
+    flex-wrap: wrap;
+  }
+}
+
 .changed-stream {
   outline: 2px solid rgb(var(--v-theme-primary));
   outline-offset: -2px;

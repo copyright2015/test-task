@@ -32,20 +32,18 @@ async function perform(action, campaign) {
   }
 }
 
-onMounted(() => load())
+onMounted(async () => {
+  await load()
+  await load(true)
+})
 </script>
 
 <template>
   <div class="page-heading">
     <h1>{{ t('campaigns') }}</h1>
-    <div class="d-flex ga-2">
-      <v-btn variant="outlined" prepend-icon="mdi-refresh" :loading="loading" @click="load(true)">
-        {{ t('refresh') }}
-      </v-btn>
-      <v-btn color="primary" prepend-icon="mdi-plus" @click="router.push('/campaigns/new')">
-        {{ t('createCampaign') }}
-      </v-btn>
-    </div>
+    <v-btn color="primary" prepend-icon="mdi-plus" @click="router.push('/campaigns/new')">
+      {{ t('createCampaign') }}
+    </v-btn>
   </div>
   <v-alert v-if="error" type="error" class="mb-4">{{ t('error') }}: {{ error }}</v-alert>
   <v-card>
@@ -63,10 +61,11 @@ onMounted(() => load())
             <v-btn
               :icon="campaign.state === 'active' ? 'mdi-pause' : 'mdi-play'"
               variant="text"
+              :disabled="loading"
               :aria-label="campaign.state === 'active' ? t('disable') : t('enable')"
               @click="perform(campaign.state === 'active' ? 'disable' : 'enable', campaign)"
             />
-            <v-btn icon="mdi-delete" variant="text" color="error" :aria-label="t('delete')" @click="perform('delete', campaign)" />
+            <v-btn icon="mdi-delete" variant="text" color="error" :disabled="loading" :aria-label="t('delete')" @click="perform('delete', campaign)" />
           </td>
         </tr>
         <tr v-if="!campaigns.length && !loading"><td colspan="3" class="text-center py-8">{{ t('noCampaigns') }}</td></tr>
